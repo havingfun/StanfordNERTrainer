@@ -1,0 +1,722 @@
+/*
+ * StanfordNERTrainerView.java
+ */
+
+package stanfordnertrainer;
+
+import edu.stanford.nlp.ie.crf.CRFClassifier;
+import edu.stanford.nlp.util.PropertiesUtils;
+import edu.stanford.nlp.util.PropertiesUtils.Property;
+import org.jdesktop.application.Action;
+import org.jdesktop.application.ResourceMap;
+import org.jdesktop.application.SingleFrameApplication;
+import org.jdesktop.application.FrameView;
+import org.jdesktop.application.TaskMonitor;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Properties;
+import java.util.Vector;
+import javax.swing.Timer;
+import javax.swing.Icon;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+
+/**
+ * The application's main frame.
+ */
+public class StanfordNERTrainerView extends FrameView {
+
+    public static File trainingFile;
+    public StanfordNERTrainerView(SingleFrameApplication app) {
+        super(app);
+
+        initComponents();
+        
+        jButtonOpen.setEnabled(false);
+        jButtonStart.setEnabled(false);
+        jLabelSentence.setVisible(false);
+        jLabelToken.setVisible(false);
+        jButtonSubmit.setVisible(false);
+        jListType.setVisible(false);
+        jLabelMessage.setVisible(false);
+        jButtonFinish.setVisible(false);
+        jComboEntities.setVisible(false);
+        jLabelListsText.setVisible(false);
+        jButtonOpenList.setVisible(false);
+        jLabelListsText.setText("Provide Known Lists");
+        // status bar initialization - message timeout, idle icon and busy animation, etc
+        ResourceMap resourceMap = getResourceMap();
+        int messageTimeout = resourceMap.getInteger("StatusBar.messageTimeout");
+        messageTimer = new Timer(messageTimeout, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                statusMessageLabel.setText("");
+            }
+        });
+        messageTimer.setRepeats(false);
+        int busyAnimationRate = resourceMap.getInteger("StatusBar.busyAnimationRate");
+        for (int i = 0; i < busyIcons.length; i++) {
+            busyIcons[i] = resourceMap.getIcon("StatusBar.busyIcons[" + i + "]");
+        }
+        busyIconTimer = new Timer(busyAnimationRate, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                busyIconIndex = (busyIconIndex + 1) % busyIcons.length;
+                statusAnimationLabel.setIcon(busyIcons[busyIconIndex]);
+            }
+        });
+        idleIcon = resourceMap.getIcon("StatusBar.idleIcon");
+        statusAnimationLabel.setIcon(idleIcon);
+        progressBar.setVisible(false);
+
+        // connecting action tasks to status bar via TaskMonitor
+        TaskMonitor taskMonitor = new TaskMonitor(getApplication().getContext());
+        taskMonitor.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                String propertyName = evt.getPropertyName();
+                if ("started".equals(propertyName)) {
+                    if (!busyIconTimer.isRunning()) {
+                        statusAnimationLabel.setIcon(busyIcons[0]);
+                        busyIconIndex = 0;
+                        busyIconTimer.start();
+                    }
+                    progressBar.setVisible(true);
+                    progressBar.setIndeterminate(true);
+                } else if ("done".equals(propertyName)) {
+                    busyIconTimer.stop();
+                    statusAnimationLabel.setIcon(idleIcon);
+                    progressBar.setVisible(false);
+                    progressBar.setValue(0);
+                } else if ("message".equals(propertyName)) {
+                    String text = (String)(evt.getNewValue());
+                    statusMessageLabel.setText((text == null) ? "" : text);
+                    messageTimer.restart();
+                } else if ("progress".equals(propertyName)) {
+                    int value = (Integer)(evt.getNewValue());
+                    progressBar.setVisible(true);
+                    progressBar.setIndeterminate(false);
+                    progressBar.setValue(value);
+                }
+            }
+        });
+    }
+
+    @Action
+    public void showAboutBox() {
+        if (aboutBox == null) {
+            JFrame mainFrame = StanfordNERTrainerApp.getApplication().getMainFrame();
+            aboutBox = new StanfordNERTrainerAboutBox(mainFrame);
+            aboutBox.setLocationRelativeTo(mainFrame);
+        }
+        StanfordNERTrainerApp.getApplication().show(aboutBox);
+    }
+
+    /** This method is called from within the constructor to
+     * initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is
+     * always regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        mainPanel = new javax.swing.JPanel();
+        jFileChooser1 = new javax.swing.JFileChooser();
+        jPanel1 = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jTextAreaType = new javax.swing.JTextArea();
+        jButtonType = new javax.swing.JButton();
+        jLabelType = new javax.swing.JLabel();
+        jLabelExample = new javax.swing.JLabel();
+        jComboEntities = new javax.swing.JComboBox();
+        jButtonOpenList = new javax.swing.JButton();
+        jLabelListsText = new javax.swing.JLabel();
+        jPanel2 = new javax.swing.JPanel();
+        jButtonOpen = new javax.swing.JButton();
+        jLabelLoadedFile = new javax.swing.JLabel();
+        jButtonLoad = new javax.swing.JButton();
+        jButtonStart = new javax.swing.JButton();
+        jLabelSentence = new javax.swing.JLabel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        jListType = new javax.swing.JList();
+        jButtonSubmit = new javax.swing.JButton();
+        jLabelToken = new javax.swing.JLabel();
+        jButtonFinish = new javax.swing.JButton();
+        jLabelMessage = new javax.swing.JLabel();
+        menuBar = new javax.swing.JMenuBar();
+        javax.swing.JMenu fileMenu = new javax.swing.JMenu();
+        javax.swing.JMenuItem exitMenuItem = new javax.swing.JMenuItem();
+        javax.swing.JMenu helpMenu = new javax.swing.JMenu();
+        javax.swing.JMenuItem aboutMenuItem = new javax.swing.JMenuItem();
+        statusPanel = new javax.swing.JPanel();
+        javax.swing.JSeparator statusPanelSeparator = new javax.swing.JSeparator();
+        statusMessageLabel = new javax.swing.JLabel();
+        statusAnimationLabel = new javax.swing.JLabel();
+        progressBar = new javax.swing.JProgressBar();
+        jInternalFrame1 = new javax.swing.JInternalFrame();
+        popupMenu1 = new java.awt.PopupMenu();
+        jFileChooser2 = new javax.swing.JFileChooser();
+
+        mainPanel.setName("mainPanel"); // NOI18N
+
+        jFileChooser1.setName("jFileChooser1"); // NOI18N
+
+        jPanel1.setName("jPanel1"); // NOI18N
+
+        jScrollPane1.setName("jScrollPane1"); // NOI18N
+
+        jTextAreaType.setColumns(20);
+        jTextAreaType.setLineWrap(true);
+        jTextAreaType.setRows(12);
+        jTextAreaType.setName("jTextAreaType"); // NOI18N
+        jScrollPane1.setViewportView(jTextAreaType);
+
+        javax.swing.ActionMap actionMap = org.jdesktop.application.Application.getInstance(stanfordnertrainer.StanfordNERTrainerApp.class).getContext().getActionMap(StanfordNERTrainerView.class, this);
+        jButtonType.setAction(actionMap.get("loadEntities")); // NOI18N
+        org.jdesktop.application.ResourceMap resourceMap = org.jdesktop.application.Application.getInstance(stanfordnertrainer.StanfordNERTrainerApp.class).getContext().getResourceMap(StanfordNERTrainerView.class);
+        jButtonType.setFont(resourceMap.getFont("jButtonType.font")); // NOI18N
+        jButtonType.setText(resourceMap.getString("jButtonType.text")); // NOI18N
+        jButtonType.setName("jButtonType"); // NOI18N
+
+        jLabelType.setFont(resourceMap.getFont("jLabelType.font")); // NOI18N
+        jLabelType.setText(resourceMap.getString("jLabelType.text")); // NOI18N
+        jLabelType.setName("jLabelType"); // NOI18N
+
+        jLabelExample.setFont(resourceMap.getFont("jLabelExample.font")); // NOI18N
+        jLabelExample.setText(resourceMap.getString("jLabelExample.text")); // NOI18N
+        jLabelExample.setName("jLabelExample"); // NOI18N
+
+        jComboEntities.setName("jComboEntities"); // NOI18N
+
+        jButtonOpenList.setAction(actionMap.get("OpenFile")); // NOI18N
+        jButtonOpenList.setFont(resourceMap.getFont("jButtonOpenList.font")); // NOI18N
+        jButtonOpenList.setText(resourceMap.getString("jButtonOpenList.text")); // NOI18N
+        jButtonOpenList.setName("jButtonOpenList"); // NOI18N
+
+        jLabelListsText.setText(resourceMap.getString("jLabelListsText.text")); // NOI18N
+        jLabelListsText.setName("jLabelListsText"); // NOI18N
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(23, 23, 23)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addGap(14, 14, 14)
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(jPanel1Layout.createSequentialGroup()
+                                        .addGap(12, 12, 12)
+                                        .addComponent(jButtonOpenList, javax.swing.GroupLayout.PREFERRED_SIZE, 119, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(jComboEntities, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addComponent(jLabelListsText)))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabelType)
+                            .addComponent(jLabelExample)))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jButtonType))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 178, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 187, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jButtonType, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabelType)
+                .addGap(18, 18, 18)
+                .addComponent(jLabelExample)
+                .addGap(18, 18, 18)
+                .addComponent(jComboEntities, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jButtonOpenList, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(jLabelListsText)
+                .addContainerGap())
+        );
+
+        jPanel2.setName("jPanel2"); // NOI18N
+
+        jButtonOpen.setAction(actionMap.get("OpenFile")); // NOI18N
+        jButtonOpen.setFont(resourceMap.getFont("jButtonOpen.font")); // NOI18N
+        jButtonOpen.setText(resourceMap.getString("jButtonOpen.text")); // NOI18N
+        jButtonOpen.setName("jButtonOpen"); // NOI18N
+
+        jLabelLoadedFile.setFont(resourceMap.getFont("jLabelLoadedFile.font")); // NOI18N
+        jLabelLoadedFile.setText(resourceMap.getString("jLabelLoadedFile.text")); // NOI18N
+        jLabelLoadedFile.setName("jLabelLoadedFile"); // NOI18N
+
+        jButtonLoad.setAction(actionMap.get("loadAll")); // NOI18N
+        jButtonLoad.setText(resourceMap.getString("jButtonLoad.text")); // NOI18N
+        jButtonLoad.setName("jButtonLoad"); // NOI18N
+
+        jButtonStart.setAction(actionMap.get("startTraining")); // NOI18N
+        jButtonStart.setFont(resourceMap.getFont("jButtonStart.font")); // NOI18N
+        jButtonStart.setText(resourceMap.getString("jButtonStart.text")); // NOI18N
+        jButtonStart.setName("jButtonStart"); // NOI18N
+
+        jLabelSentence.setFont(resourceMap.getFont("jLabelSentence.font")); // NOI18N
+        jLabelSentence.setText(resourceMap.getString("jLabelSentence.text")); // NOI18N
+        jLabelSentence.setName("jLabelSentence"); // NOI18N
+
+        jScrollPane2.setName("jScrollPane2"); // NOI18N
+
+        jListType.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jListType.setName("jListType"); // NOI18N
+        jScrollPane2.setViewportView(jListType);
+
+        jButtonSubmit.setAction(actionMap.get("submitEntityType")); // NOI18N
+        jButtonSubmit.setFont(resourceMap.getFont("jButtonSubmit.font")); // NOI18N
+        jButtonSubmit.setText(resourceMap.getString("jButtonSubmit.text")); // NOI18N
+        jButtonSubmit.setName("jButtonSubmit"); // NOI18N
+
+        jLabelToken.setText(resourceMap.getString("jLabelToken.text")); // NOI18N
+        jLabelToken.setName("jLabelToken"); // NOI18N
+
+        jButtonFinish.setAction(actionMap.get("createModelFile")); // NOI18N
+        jButtonFinish.setFont(resourceMap.getFont("jButtonFinish.font")); // NOI18N
+        jButtonFinish.setText(resourceMap.getString("jButtonFinish.text")); // NOI18N
+        jButtonFinish.setName("jButtonFinish"); // NOI18N
+
+        jLabelMessage.setText(resourceMap.getString("jLabelMessage.text")); // NOI18N
+        jLabelMessage.setName("jLabelMessage"); // NOI18N
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(30, 30, 30)
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabelSentence)
+                            .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                .addGroup(jPanel2Layout.createSequentialGroup()
+                                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(jLabelToken)
+                                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                            .addComponent(jButtonFinish, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                            .addComponent(jButtonSubmit, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                        .addComponent(jLabelMessage, javax.swing.GroupLayout.DEFAULT_SIZE, 142, Short.MAX_VALUE))
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addComponent(jLabelLoadedFile, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 320, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(87, 87, 87)
+                        .addComponent(jButtonOpen))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(119, 119, 119)
+                        .addComponent(jButtonLoad, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(143, 143, 143)
+                        .addComponent(jButtonStart, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jButtonOpen, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabelLoadedFile, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jButtonStart)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(18, 18, 18)
+                        .addComponent(jLabelSentence)
+                        .addGap(52, 52, 52)
+                        .addComponent(jLabelToken)
+                        .addGap(18, 18, 18)
+                        .addComponent(jButtonSubmit, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jButtonFinish, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(jLabelMessage))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(61, 61, 61)
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 183, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(18, 18, 18)
+                .addComponent(jButtonLoad, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(21, 21, 21))
+        );
+
+        javax.swing.GroupLayout mainPanelLayout = new javax.swing.GroupLayout(mainPanel);
+        mainPanel.setLayout(mainPanelLayout);
+        mainPanelLayout.setHorizontalGroup(
+            mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(mainPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, 350, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(26, Short.MAX_VALUE))
+        );
+        mainPanelLayout.setVerticalGroup(
+            mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(mainPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(mainPanelLayout.createSequentialGroup()
+                        .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addContainerGap())
+                    .addGroup(mainPanelLayout.createSequentialGroup()
+                        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGap(16, 16, 16))))
+        );
+
+        menuBar.setName("menuBar"); // NOI18N
+
+        fileMenu.setText(resourceMap.getString("fileMenu.text")); // NOI18N
+        fileMenu.setName("fileMenu"); // NOI18N
+
+        exitMenuItem.setAction(actionMap.get("quit")); // NOI18N
+        exitMenuItem.setName("exitMenuItem"); // NOI18N
+        fileMenu.add(exitMenuItem);
+
+        menuBar.add(fileMenu);
+
+        helpMenu.setText(resourceMap.getString("helpMenu.text")); // NOI18N
+        helpMenu.setName("helpMenu"); // NOI18N
+
+        aboutMenuItem.setAction(actionMap.get("showAboutBox")); // NOI18N
+        aboutMenuItem.setName("aboutMenuItem"); // NOI18N
+        helpMenu.add(aboutMenuItem);
+
+        menuBar.add(helpMenu);
+
+        statusPanel.setName("statusPanel"); // NOI18N
+
+        statusPanelSeparator.setName("statusPanelSeparator"); // NOI18N
+
+        statusMessageLabel.setName("statusMessageLabel"); // NOI18N
+
+        statusAnimationLabel.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        statusAnimationLabel.setName("statusAnimationLabel"); // NOI18N
+
+        progressBar.setName("progressBar"); // NOI18N
+
+        javax.swing.GroupLayout statusPanelLayout = new javax.swing.GroupLayout(statusPanel);
+        statusPanel.setLayout(statusPanelLayout);
+        statusPanelLayout.setHorizontalGroup(
+            statusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(statusPanelSeparator, javax.swing.GroupLayout.DEFAULT_SIZE, 616, Short.MAX_VALUE)
+            .addGroup(statusPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(statusMessageLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 432, Short.MAX_VALUE)
+                .addComponent(progressBar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(statusAnimationLabel)
+                .addContainerGap())
+        );
+        statusPanelLayout.setVerticalGroup(
+            statusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(statusPanelLayout.createSequentialGroup()
+                .addComponent(statusPanelSeparator, javax.swing.GroupLayout.PREFERRED_SIZE, 2, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(statusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(statusMessageLabel)
+                    .addComponent(statusAnimationLabel)
+                    .addComponent(progressBar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(3, 3, 3))
+        );
+
+        jInternalFrame1.setName("jInternalFrame1"); // NOI18N
+        jInternalFrame1.setVisible(true);
+
+        javax.swing.GroupLayout jInternalFrame1Layout = new javax.swing.GroupLayout(jInternalFrame1.getContentPane());
+        jInternalFrame1.getContentPane().setLayout(jInternalFrame1Layout);
+        jInternalFrame1Layout.setHorizontalGroup(
+            jInternalFrame1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 0, Short.MAX_VALUE)
+        );
+        jInternalFrame1Layout.setVerticalGroup(
+            jInternalFrame1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 0, Short.MAX_VALUE)
+        );
+
+        popupMenu1.setLabel(resourceMap.getString("popupMenu1.label")); // NOI18N
+
+        jFileChooser2.setName("jFileChooser2"); // NOI18N
+
+        setComponent(mainPanel);
+        setMenuBar(menuBar);
+        setStatusBar(statusPanel);
+    }// </editor-fold>//GEN-END:initComponents
+
+    @Action
+    public void OpenFile() {
+        //OpenFile of = new OpenFile();
+        //of.setVisible(true);
+        int returnVal = jFileChooser1.showOpenDialog(null);
+        if (returnVal == jFileChooser1.APPROVE_OPTION) {
+            trainingFile = jFileChooser1.getSelectedFile();
+            try {
+              // What to do with the file, e.g. display it in a TextArea
+              jLabelLoadedFile.setText("Loaded File - "+trainingFile.getName());
+                //jTextArea1.read( new FileReader( file.getAbsolutePath() ), null );
+            } catch (Exception ex) {
+              System.out.println("problem accessing file"+trainingFile.getAbsolutePath());
+            }
+        } else {
+            System.out.println("File access cancelled by user.");
+        }
+        jButtonStart.setEnabled(true);
+    }
+
+    @Action
+    public void loadAll() {
+        String dir = "";
+        if (!OpenNLP.createTokenizer(dir +
+				"res/tokenizer/opennlp/EnglishTok.bin.gz"))
+			System.out.println("Could not create tokenizer.");
+//		LingPipe.createTokenizer();
+
+		// create sentence detector
+		System.out.println("Creating sentence detector...");
+		if (!OpenNLP.createSentenceDetector(dir +
+				"res/sentencedetector/opennlp/EnglishSD.bin.gz"))
+			System.out.println("Could not create sentence detector.");
+
+		// create part of speech tagger
+		System.out.println("Creating POS tagger...");
+		if (!OpenNLP.createPosTagger(
+				dir + "res/postagger/opennlp/tag.bin.gz",
+				dir + "res/postagger/opennlp/tagdict"))
+			System.out.println("Could not create OpenNLP POS tagger.");
+                // create chunker
+		System.out.println("Creating chunker...");
+		if (!OpenNLP.createChunker(dir +
+				"res/phrasechunker/opennlp/EnglishChunk.bin.gz"))
+			System.out.println("Could not create chunker.");
+         jButtonLoad.setEnabled(false);
+         jButtonOpen.setEnabled(true);
+    }
+    
+    
+    public static HashMap<String,String> entityVisited = new HashMap<String, String>();
+    public static int currenttok = 0;
+    public static String[] Entitytags = new String[0];
+    public static String sentences[] = new String[0];
+    public static String tokens[][] = new String[0][0];
+    public static Vector<String> alltokens = new Vector<String>();
+    public static Vector<Integer> identitytokens = new Vector<Integer>();
+    public static int tokcount = 0;
+    public static int identitytokcount = 0;
+    
+    @Action
+    public void startTraining() throws Exception {
+        BufferedReader br = new BufferedReader(new FileReader(trainingFile));
+        String line = null;
+        String res = "";
+        while((line = br.readLine())!= null)
+        {
+            res += line+"\n";
+        }
+        System.out.println(res);
+        sentences = OpenNLP.sentDetect(res);
+        tokens = new String[sentences.length][];
+        for(int i=0;i<sentences.length;i++)
+        {
+            String tok[] = OpenNLP.tokenize(sentences[i]);
+            String pos[] = OpenNLP.tagPos(tok);
+            tokens[i] = new String[tok.length];
+            for(int j=0;j<tok.length;j++)
+            {
+                if(pos[j].contains("NN") || pos[j].contains("JJ") || pos[j].contains("RB"))
+                 {System.out.println(tok[j]);identitytokens.add(tokcount);}
+                tokens[i][j] = tok[j];
+                alltokens.add(tok[j]);
+                tokcount++;
+            }
+        }
+        identitytokcount = identitytokens.size();
+        Entitytags = new String[tokcount];
+        System.out.println(tokcount+" Tokens Loaded");
+        jLabelSentence.setVisible(true);
+        jLabelToken.setVisible(true);
+        jButtonSubmit.setVisible(true);
+        jButtonFinish.setVisible(true);
+        jLabelMessage.setVisible(true);
+        jListType.setVisible(true);
+        paintToken();
+    }
+    
+    public void paintToken()
+    {
+        if(currenttok==identitytokcount)
+        {
+               jButtonSubmit.setEnabled(false);
+               jLabelSentence.setText("All Sentences Trained"); 
+               jLabelToken.setText("Entity : No Token Left");
+        }
+        else
+        {
+            String sentence = "";
+            int tokvalue = identitytokens.elementAt(currenttok);
+            System.out.println(tokvalue);
+            String mappedsentence = "";
+            for(int i=0;i<1;i++)
+            {
+                if(tokvalue+i>=0 && tokvalue+i<tokcount)
+                {
+                    mappedsentence+=alltokens.elementAt(tokvalue+i);
+                }
+            }
+            if(entityVisited.containsKey(mappedsentence))
+            {
+                Entitytags[tokvalue] = entityVisited.get(mappedsentence);
+                currenttok++;
+                paintToken();
+            }
+            else
+            {
+                for(int i=-4;i<5;i++)
+                {
+                    if(tokvalue+i>=0 && tokvalue+i<tokcount)
+                    {
+                        sentence+=alltokens.elementAt(tokvalue+i)+" ";
+                    }
+                }
+                jLabelSentence.setText("Usage : "+sentence);
+                jLabelToken.setText("Entity : " + alltokens.elementAt(tokvalue));
+            }
+        }
+    }
+
+    @Action
+    public void loadEntities() {
+        jListType.removeAll();
+        String types = jTextAreaType.getText();
+        String vals[] = types.split("\n");
+        jListType.setListData(vals);
+    }
+
+    @Action
+    public void submitEntityType() {
+        
+        int tokvalue = identitytokens.elementAt(currenttok);
+        String mappedsentence = "";
+        for(int i=0;i<1;i++)
+        {
+            if(tokvalue+i>=0 && tokvalue+i<tokcount)
+            {
+                mappedsentence+=alltokens.elementAt(tokvalue+i);
+            }
+        }
+        String val = (String)jListType.getSelectedValue();
+        if(val==null)
+        {
+            val = "0";
+        }
+        Entitytags[tokvalue] = val;
+        entityVisited.put(mappedsentence, val);
+        currenttok++;
+        jListType.clearSelection();
+        paintToken();
+    }
+
+    @Action
+    public void createModelFile() throws Exception {
+        PrintWriter pr = new PrintWriter(trainingFile.getName()+".tsv");
+        for(int i=0;i<tokcount;i++)
+        {
+            if(Entitytags[i]==null)
+                pr.println(alltokens.elementAt(i) + "\tO");
+            else if(Entitytags[i].equals("0"))                
+                pr.println(alltokens.elementAt(i) + "\tO");
+            else
+                pr.println(alltokens.elementAt(i) + "\t" + Entitytags[i]);
+        }
+        pr.close();
+        BufferedReader br = new BufferedReader(new FileReader("res/nertagger/training.prop"));
+        pr = new PrintWriter(trainingFile.getName()+".prop");
+        String line = null;
+        while((line = br.readLine())!= null)
+        {
+            if(line.contains("trainFile = "))
+            {
+                pr.println(line + trainingFile.getName()+".tsv");
+            }
+            else if(line.contains("serializeTo = "))
+            {
+                pr.println(line + trainingFile.getName()+"-model.ser.gz");
+            }
+            else
+            {
+                pr.println(line);
+            }
+        }
+        pr.close();
+        Runtime run = Runtime.getRuntime();
+        Process  proc = run.exec("java -cp stanford-ner.jar edu.stanford.nlp.ie.crf.CRFClassifier -prop "+trainingFile.getName()+".prop");
+        proc.waitFor();
+        br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+        while(br.ready())
+            System.out.println(br.readLine());
+        jButtonFinish.setEnabled(false);
+        jLabelMessage.setText("Model Created");
+        
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton jButtonFinish;
+    private javax.swing.JButton jButtonLoad;
+    private javax.swing.JButton jButtonOpen;
+    private javax.swing.JButton jButtonOpenList;
+    private javax.swing.JButton jButtonStart;
+    private javax.swing.JButton jButtonSubmit;
+    private javax.swing.JButton jButtonType;
+    private javax.swing.JComboBox jComboEntities;
+    private javax.swing.JFileChooser jFileChooser1;
+    private javax.swing.JFileChooser jFileChooser2;
+    private javax.swing.JInternalFrame jInternalFrame1;
+    private javax.swing.JLabel jLabelExample;
+    private javax.swing.JLabel jLabelListsText;
+    private javax.swing.JLabel jLabelLoadedFile;
+    private javax.swing.JLabel jLabelMessage;
+    private javax.swing.JLabel jLabelSentence;
+    private javax.swing.JLabel jLabelToken;
+    private javax.swing.JLabel jLabelType;
+    private javax.swing.JList jListType;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JTextArea jTextAreaType;
+    private javax.swing.JPanel mainPanel;
+    private javax.swing.JMenuBar menuBar;
+    private java.awt.PopupMenu popupMenu1;
+    private javax.swing.JProgressBar progressBar;
+    private javax.swing.JLabel statusAnimationLabel;
+    private javax.swing.JLabel statusMessageLabel;
+    private javax.swing.JPanel statusPanel;
+    // End of variables declaration//GEN-END:variables
+
+    private final Timer messageTimer;
+    private final Timer busyIconTimer;
+    private final Icon idleIcon;
+    private final Icon[] busyIcons = new Icon[15];
+    private int busyIconIndex = 0;
+
+    private JDialog aboutBox;
+}
